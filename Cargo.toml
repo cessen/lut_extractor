@@ -3,7 +3,7 @@ name = "lut_extractor"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 exr = "1.4.1"
+clap = { version = "3.1.8", default-features = false, features=["std"] }
+colorbox = { git = "https://github.com/cessen/colorbox", branch = "master" }
