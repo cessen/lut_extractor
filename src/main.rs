@@ -8,7 +8,7 @@ use colorbox::transfer_functions::srgb;
 use test_image::{GRADIENT_LEN, RES_X, RES_Y};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const LUT_LEN: usize = 1 << 17;
+const LUT_LEN: usize = 1 << 12;
 
 fn main() {
     let args = Command::new("LUT Extractor")
@@ -85,9 +85,6 @@ fn main() {
             gray_r.push(rgb[0]);
             gray_g.push(rgb[1]);
             gray_b.push(rgb[2]);
-            // gray_r.push(srgb::to_linear(rgb[0]));
-            // gray_g.push(srgb::to_linear(rgb[1]));
-            // gray_b.push(srgb::to_linear(rgb[2]));
         }
 
         // Write the LUT.
