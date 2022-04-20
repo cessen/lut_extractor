@@ -7,3 +7,4 @@ edition = "2021"
 exr = "1.4.1"
 clap = { version = "3.1.8", default-features = false, features=["std"] }
 colorbox = { git = "https://github.com/cessen/colorbox", branch = "master" }
+simplers_optimization = "0.4.3"

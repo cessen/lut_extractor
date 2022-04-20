@@ -1,9 +1,11 @@
+mod linear_log;
+mod optimize_log;
 mod test_image;
 
 use std::{fs::File, io::BufWriter, path::Path};
 
 use clap::{Arg, Command};
-use colorbox::transfer_functions::srgb;
+// use colorbox::transfer_functions::srgb;
 
 use test_image::{GRADIENT_LEN, RES_X, RES_Y};
 
@@ -46,7 +48,7 @@ fn main() {
     } else {
         let input_path = args.value_of("input").unwrap();
 
-        let base_image = test_image::build();
+        // let base_image = test_image::build();
         let mut input_image = {
             let (image, res_x, res_y) = read_rgb_exr(input_path).unwrap();
             assert_eq!(
@@ -86,6 +88,8 @@ fn main() {
             gray_g.push(rgb[1]);
             gray_b.push(rgb[2]);
         }
+
+        optimize_log::find_parameters(&gray_r);
 
         // Write the LUT.
         colorbox::formats::cube::write_1d(
