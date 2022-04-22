@@ -67,11 +67,11 @@ fn main() {
 
         // Attempt to find an analytic log-linear function that matches
         // the transfer function.
-        let full_lut: Vec<f32> = gray
+        let avg_lut: Vec<f32> = gray
             .iter()
             .map(|rgb| ((rgb[0] as f64 + rgb[1] as f64 + rgb[2] as f64) / 3.0) as f32)
             .collect();
-        optimize_log::find_parameters(&full_lut);
+        optimize_log::find_parameters(&avg_lut);
 
         // Build the LUT for export.
         let mut prev = gray[0];
@@ -91,25 +91,34 @@ fn main() {
         let mut gray_r = Vec::with_capacity(LUT_LEN);
         let mut gray_g = Vec::with_capacity(LUT_LEN);
         let mut gray_b = Vec::with_capacity(LUT_LEN);
+        let mut gray_avg = Vec::with_capacity(LUT_LEN);
         for i in 0..LUT_LEN {
             let t = i as f32 / (LUT_LEN - 1) as f32;
-            let rgb = lerp_slice(gray, t);
+            let rgb = lerp_slice_3(gray, t);
             gray_r.push(rgb[0]);
             gray_g.push(rgb[1]);
             gray_b.push(rgb[2]);
+            gray_avg.push(lerp_slice(&avg_lut, t));
         }
 
-        // Write the LUT.
+        // Write the LUT files.
         colorbox::formats::cube::write_1d(
-            BufWriter::new(File::create("test.cube").unwrap()),
+            BufWriter::new(File::create(&Path::new(input_path).with_extension("cube")).unwrap()),
             [(0.0, 1.0); 3],
             [&gray_r, &gray_g, &gray_b],
+        )
+        .unwrap();
+        colorbox::formats::spi1d::write(
+            BufWriter::new(File::create(&Path::new(input_path).with_extension("spi1d")).unwrap()),
+            0.0,
+            1.0,
+            &[&gray_avg],
         )
         .unwrap();
     }
 }
 
-fn lerp_slice(slice: &[[f32; 3]], t: f32) -> [f32; 3] {
+fn lerp_slice_3(slice: &[[f32; 3]], t: f32) -> [f32; 3] {
     assert!(!slice.is_empty());
 
     let t2 = (slice.len() - 1) as f32 * t;
@@ -127,6 +136,23 @@ fn lerp_slice(slice: &[[f32; 3]], t: f32) -> [f32; 3] {
             (a[1] * inv_alpha) + (b[1] * alpha),
             (a[2] * inv_alpha) + (b[2] * alpha),
         ]
+    }
+}
+
+fn lerp_slice(slice: &[f32], t: f32) -> f32 {
+    assert!(!slice.is_empty());
+
+    let t2 = (slice.len() - 1) as f32 * t;
+    let t2i = t2 as usize;
+
+    if t2i == (slice.len() - 1) {
+        *slice.last().unwrap()
+    } else {
+        let alpha = t2.fract();
+        let inv_alpha = 1.0 - alpha;
+        let a = slice[t2i];
+        let b = slice[t2i + 1];
+        (a * inv_alpha) + (b * alpha)
     }
 }
 
