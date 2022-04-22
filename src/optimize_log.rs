@@ -55,7 +55,7 @@ pub fn find_parameters(lut: &[f32]) {
     avg_err /= avg_samples as f64;
 
     println!(
-        "Max Err: {:.4}%\nAvg Err: {:.4}%",
+        "Max Relative Error: {:.4}%\nAvg Relative Error: {:.4}%",
         max_err * 100.0,
         avg_err * 100.0
     );
