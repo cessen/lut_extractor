@@ -67,68 +67,48 @@ pub fn transition_point(line_offset: f64, slope: f64, log_offset: f64, base: f64
 
 //-------------------------------------------------------------
 
-/// Generates Rust code for a linear-to-log transfer function with the
-/// given parameters.
-pub fn generate_linear_to_log(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> String {
+/// Generates Rust code for a both linear-to-log and log-to-linear
+/// functions with the given parameters.
+pub fn generate_code(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> String {
     let transition = 1.0 / (slope * base.ln());
-    let k = transition + log_offset;
+    let k1 = transition + log_offset;
+    let k2 = (transition - line_offset + log_offset) * slope;
     let l = (transition - line_offset + log_offset) * slope - transition.log(base);
 
     format!(
         r#"
+const A: f32 = {};
+const B: f32 = {};
+const C: f32 = {};
+const D: f32 = {};
+const E: f32 = {};
+
 pub fn linear_to_log(x: f32) -> f32 {{
-    const A: f32 = {};
-    const B: f32 = {};
-    const C: f32 = {};
-    const D: f32 = {};
-    const E: f32 = {};
-    const F: f32 = {};
+    const P: f32 = {};
 
-    if x <= A {{
-        (x - B) * C
+    if x <= P {{
+        (x - A) * B
     }} else {{
-        (x - D).log2() * (1.0 / E) + F
+        ((x - C).log2() / D) + E
     }}
 }}
-"#,
-        k,
-        line_offset,
-        slope,
-        log_offset,
-        base.log2(),
-        l,
-    )
-}
 
-/// Generates Rust code for a log-to-linear transfer function with the
-/// given parameters.
-pub fn generate_log_to_linear(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> String {
-    let transition = 1.0 / (slope * base.ln());
-    let k = (transition - line_offset + log_offset) * slope;
-    let l = (transition - line_offset + log_offset) * slope - transition.log(base);
-
-    format!(
-        r#"
 pub fn log_to_linear(x: f32) -> f32 {{
-    const A: f32 = {};
-    const B: f32 = {};
-    const C: f32 = {};
-    const D: f32 = {};
-    const E: f32 = {};
-    const F: f32 = {};
+    const P: f32 = {};
 
-    if x <= A {{
-        (x * (1.0 / C)) + B
+    if x <= P {{
+        (x / B) + A
     }} else {{
-        ((x - F) * E).exp2() + D
+        ((x - E) * D).exp2() + C
     }}
 }}
 "#,
-        k,
         line_offset,
         slope,
         log_offset,
         base.log2(),
         l,
+        k1,
+        k2,
     )
 }

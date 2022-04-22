@@ -63,9 +63,8 @@ pub fn find_parameters(lut: &[f32]) {
     // dbg!(offset, log_offset, slope, base, end);
 
     println!(
-        "{}{}",
-        crate::linear_log::generate_linear_to_log(offset, slope, log_offset, base),
-        crate::linear_log::generate_log_to_linear(offset, slope, log_offset, base),
+        "{}",
+        crate::linear_log::generate_code(offset, slope, log_offset, base),
     );
 }
 
