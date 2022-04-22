@@ -62,8 +62,18 @@ fn main() {
             image
         };
 
-        // Build the LUT.
+        // Fetch the transfer function LUT.
         let gray = &mut input_image[test_image::gray_idx(0)..test_image::gray_idx(GRADIENT_LEN)];
+
+        // Attempt to find an analytic log-linear function that matches
+        // the transfer function.
+        let full_lut: Vec<f32> = gray
+            .iter()
+            .map(|rgb| ((rgb[0] as f64 + rgb[1] as f64 + rgb[2] as f64) / 3.0) as f32)
+            .collect();
+        optimize_log::find_parameters(&full_lut);
+
+        // Build the LUT for export.
         let mut prev = gray[0];
         for rgb in gray.iter_mut() {
             // Ensure montonicity.
@@ -88,8 +98,6 @@ fn main() {
             gray_g.push(rgb[1]);
             gray_b.push(rgb[2]);
         }
-
-        optimize_log::find_parameters(&gray_r);
 
         // Write the LUT.
         colorbox::formats::cube::write_1d(

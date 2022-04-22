@@ -38,6 +38,33 @@ pub fn log_to_linear(x: f64, line_offset: f64, slope: f64, log_offset: f64, base
     }
 }
 
+// Find the `log_offset` needed to put x=end at y=1.0 in the linear_to_log function.
+pub fn find_log_offset_for_end(end: f64, line_offset: f64, slope: f64, base: f64) -> f64 {
+    let mut offset_up = 10.0;
+    let mut offset_down = -10.0;
+
+    for _ in 0..54 {
+        let log_offset = (offset_up + offset_down) * 0.5;
+        if linear_to_log(end, line_offset, slope, log_offset, base) > 1.0 {
+            offset_up = log_offset;
+        } else {
+            offset_down = log_offset;
+        }
+    }
+
+    offset_up
+}
+
+// Transition point between log and linear.
+//
+// Returned as (linear, non-linear).
+pub fn transition_point(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> (f64, f64) {
+    let transition = 1.0 / (slope * base.ln());
+    let k = transition + log_offset;
+
+    (k, (k - line_offset) * slope)
+}
+
 //-------------------------------------------------------------
 
 /// Generates Rust code for a linear-to-log transfer function with the
