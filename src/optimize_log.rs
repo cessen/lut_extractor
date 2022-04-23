@@ -1,27 +1,34 @@
 use crate::linear_log::log_to_linear as log_to_lin;
 
 pub fn find_parameters(lut: &[f32]) {
-    let lin_norm = 1.0 / (lut.len() - 1) as f64;
+    let norm_div = (lut.len() - 1) as f64;
+
+    // Collect a large subset of LUT points as (log, lin) coordinates.
+    let coords: Vec<(f64, f64)> = lut
+        .iter()
+        .enumerate()
+        .step_by(lut.len() / 4096)
+        .map(|(i, y)| (i as f64 / norm_div, *y as f64))
+        .collect();
 
     // Compute the stuff that we can without estimation.
     let offset = lut[0] as f64;
     let end = lut[lut.len() - 1] as f64;
     let slope = {
-        // We take the difference of points near zero for increased accuracy.
-        let (mut i, _) = lut.iter().enumerate().find(|(_, y)| **y > 0.0).unwrap();
-        if i == 0 {
-            i += 1;
-        }
-        lin_norm / (lut[i] as f64 - lut[i - 1] as f64)
+        // Find the point closest to linear zero that's not the first point.
+        let p = (&coords[1..]).iter().fold((1000.0f64, 1000.0f64), |a, b| {
+            if a.1.abs() < b.1.abs() {
+                a
+            } else {
+                *b
+            }
+        });
+        optimize(
+            |s: f64| ((p.0 / s) + offset - p.1).abs(),
+            [0.000001, 10000000.0],
+            100,
+        )
     };
-
-    // Collect LUT points as (x, y) coordinates.
-    let coords: Vec<(f64, f64)> = lut
-        .iter()
-        .enumerate()
-        .step_by(lut.len() / 256)
-        .map(|(i, y)| (i as f64 * lin_norm, *y as f64))
-        .collect();
 
     // Do the fitting.
     let base = optimize(
@@ -45,15 +52,10 @@ pub fn find_parameters(lut: &[f32]) {
     let mut avg_err = 0.0f64;
     let mut avg_samples = 0usize;
     for (x, y) in coords.iter().copied() {
-        // Only record error for the log part of the curve because we
-        // computed the linear segment's slope and offset analytically,
-        // and the relative error of points very near zero isn't reliable.
-        if y > transition.0 {
-            let e = (log_to_lin(x, offset, slope, log_offset, base) - y).abs() / y.abs();
-            max_err = max_err.max(e);
-            avg_err += e;
-            avg_samples += 1;
-        }
+        let e = (log_to_lin(x, offset, slope, log_offset, base) - y).abs() / y.abs();
+        max_err = max_err.max(e);
+        avg_err += e;
+        avg_samples += 1;
     }
     avg_err /= avg_samples as f64;
 
