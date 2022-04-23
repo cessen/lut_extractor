@@ -5,9 +5,8 @@ mod test_image;
 use std::{fs::File, io::BufWriter, path::Path};
 
 use clap::{Arg, Command};
-// use colorbox::transfer_functions::srgb;
 
-use test_image::{GRADIENT_LEN, RES_X, RES_Y};
+use test_image::{rgb_idx, GRADIENT_LEN, RES_X, RES_Y, TABLE_SIZE};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const LUT_LEN: usize = 1 << 12;
@@ -30,6 +29,12 @@ fn main() {
                 .short('t')
                 .long("test_image")
                 .help("Generates the test EXR file."),
+        )
+        .arg(
+            Arg::new("chromaticities")
+                .short('c')
+                .long("chroma")
+                .help("Extract chromaticities instead of a transfer function"),
         )
         .get_matches();
 
@@ -62,59 +67,90 @@ fn main() {
             image
         };
 
-        // Fetch the transfer function LUT.
-        let gray = &mut input_image[test_image::gray_idx(0)..test_image::gray_idx(GRADIENT_LEN)];
+        if args.is_present("chromaticities") {
+            // Get the "pure" red, green, blue, and white pixels.
+            // These should have been transformed into XYZ space.
+            let idx = TABLE_SIZE / 2;
+            let r = input_image[rgb_idx(idx, 0, 0)];
+            let g = input_image[rgb_idx(0, idx, 0)];
+            let b = input_image[rgb_idx(0, 0, idx)];
+            let w = input_image[rgb_idx(idx, idx, idx)];
 
-        // Attempt to find an analytic log-linear function that matches
-        // the transfer function.
-        let avg_lut: Vec<f32> = gray
-            .iter()
-            .map(|rgb| ((rgb[0] as f64 + rgb[1] as f64 + rgb[2] as f64) / 3.0) as f32)
-            .collect();
-        optimize_log::find_parameters(&avg_lut);
+            let xy_chroma = |xyz: [f32; 3]| {
+                let sum = xyz[0] + xyz[1] + xyz[2];
+                (xyz[0] / sum, xyz[1] / sum)
+            };
 
-        // Build the LUT for export.
-        let mut prev = gray[0];
-        for rgb in gray.iter_mut() {
-            // Ensure montonicity.
-            if rgb[0] < prev[0] {
-                rgb[0] = prev[0];
+            let r_xy = xy_chroma(r);
+            let g_xy = xy_chroma(g);
+            let b_xy = xy_chroma(b);
+            let w_xy = xy_chroma(w);
+
+            println!("Chromaticities (assuming XYZ input):");
+            println!("R: ({}, {})", r_xy.0, r_xy.1);
+            println!("G: ({}, {})", g_xy.0, g_xy.1);
+            println!("B: ({}, {})", b_xy.0, b_xy.1);
+            println!("W: ({}, {})", w_xy.0, w_xy.1);
+        } else {
+            // Fetch the transfer function LUT.
+            let gray =
+                &mut input_image[test_image::gray_idx(0)..test_image::gray_idx(GRADIENT_LEN)];
+
+            // Attempt to find an analytic log-linear function that matches
+            // the transfer function.
+            let avg_lut: Vec<f32> = gray
+                .iter()
+                .map(|rgb| ((rgb[0] as f64 + rgb[1] as f64 + rgb[2] as f64) / 3.0) as f32)
+                .collect();
+            optimize_log::find_parameters(&avg_lut);
+
+            // Build the LUT for export.
+            let mut prev = gray[0];
+            for rgb in gray.iter_mut() {
+                // Ensure montonicity.
+                if rgb[0] < prev[0] {
+                    rgb[0] = prev[0];
+                }
+                if rgb[1] < prev[1] {
+                    rgb[1] = prev[1];
+                }
+                if rgb[2] < prev[2] {
+                    rgb[2] = prev[2];
+                }
+                prev = *rgb;
             }
-            if rgb[1] < prev[1] {
-                rgb[1] = prev[1];
+            let mut gray_r = Vec::with_capacity(LUT_LEN);
+            let mut gray_g = Vec::with_capacity(LUT_LEN);
+            let mut gray_b = Vec::with_capacity(LUT_LEN);
+            let mut gray_avg = Vec::with_capacity(LUT_LEN);
+            for i in 0..LUT_LEN {
+                let t = i as f32 / (LUT_LEN - 1) as f32;
+                let rgb = lerp_slice_3(gray, t);
+                gray_r.push(rgb[0]);
+                gray_g.push(rgb[1]);
+                gray_b.push(rgb[2]);
+                gray_avg.push(lerp_slice(&avg_lut, t));
             }
-            if rgb[2] < prev[2] {
-                rgb[2] = prev[2];
-            }
-            prev = *rgb;
+
+            // Write the LUT files.
+            colorbox::formats::cube::write_1d(
+                BufWriter::new(
+                    File::create(&Path::new(input_path).with_extension("cube")).unwrap(),
+                ),
+                [(0.0, 1.0); 3],
+                [&gray_r, &gray_g, &gray_b],
+            )
+            .unwrap();
+            colorbox::formats::spi1d::write(
+                BufWriter::new(
+                    File::create(&Path::new(input_path).with_extension("spi1d")).unwrap(),
+                ),
+                0.0,
+                1.0,
+                &[&gray_avg],
+            )
+            .unwrap();
         }
-        let mut gray_r = Vec::with_capacity(LUT_LEN);
-        let mut gray_g = Vec::with_capacity(LUT_LEN);
-        let mut gray_b = Vec::with_capacity(LUT_LEN);
-        let mut gray_avg = Vec::with_capacity(LUT_LEN);
-        for i in 0..LUT_LEN {
-            let t = i as f32 / (LUT_LEN - 1) as f32;
-            let rgb = lerp_slice_3(gray, t);
-            gray_r.push(rgb[0]);
-            gray_g.push(rgb[1]);
-            gray_b.push(rgb[2]);
-            gray_avg.push(lerp_slice(&avg_lut, t));
-        }
-
-        // Write the LUT files.
-        colorbox::formats::cube::write_1d(
-            BufWriter::new(File::create(&Path::new(input_path).with_extension("cube")).unwrap()),
-            [(0.0, 1.0); 3],
-            [&gray_r, &gray_g, &gray_b],
-        )
-        .unwrap();
-        colorbox::formats::spi1d::write(
-            BufWriter::new(File::create(&Path::new(input_path).with_extension("spi1d")).unwrap()),
-            0.0,
-            1.0,
-            &[&gray_avg],
-        )
-        .unwrap();
     }
 }
 
