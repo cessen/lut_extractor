@@ -8,7 +8,10 @@ pub fn find_parameters(lut: &[f32]) {
     let end = lut[lut.len() - 1] as f64;
     let slope = {
         // We take the difference of points near zero for increased accuracy.
-        let (i, _) = lut.iter().enumerate().find(|(_, y)| **y > 0.0).unwrap();
+        let (mut i, _) = lut.iter().enumerate().find(|(_, y)| **y > 0.0).unwrap();
+        if i == 0 {
+            i += 1;
+        }
         lin_norm / (lut[i] as f64 - lut[i - 1] as f64)
     };
 
