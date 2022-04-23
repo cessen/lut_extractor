@@ -230,7 +230,7 @@ fn write_rgb_exr<P: AsRef<Path>>(
         LayerAttributes::named(""),
         Encoding::SMALL_LOSSLESS,
         SpecificChannels::rgb(|co: exr::math::Vec2<usize>| {
-            let rgb = pixels[co.1 * res_y + co.0];
+            let rgb = pixels[co.1 * res_x + co.0];
             (rgb[0], rgb[1], rgb[2])
         }),
     ))
