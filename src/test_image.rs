@@ -61,6 +61,7 @@ pub fn build() -> Vec<[f32; 3]> {
 
 /// Gives the index in the test image Vec of the given
 /// gray-gradient index.
+#[allow(unused)]
 #[inline(always)]
 pub fn gray_idx(idx: usize) -> usize {
     idx
@@ -68,6 +69,7 @@ pub fn gray_idx(idx: usize) -> usize {
 
 /// Gives the index in the test image Vec of the given
 /// red-gradient index.
+#[allow(unused)]
 #[inline(always)]
 pub fn red_idx(idx: usize) -> usize {
     GRADIENT_LEN + idx
@@ -75,6 +77,7 @@ pub fn red_idx(idx: usize) -> usize {
 
 /// Gives the index in the test image Vec of the given
 /// green-gradient index.
+#[allow(unused)]
 #[inline(always)]
 pub fn green_idx(idx: usize) -> usize {
     GRADIENT_LEN * 2 + idx
@@ -82,6 +85,7 @@ pub fn green_idx(idx: usize) -> usize {
 
 /// Gives the index in the test image Vec of the given
 /// blue-gradient index.
+#[allow(unused)]
 #[inline(always)]
 pub fn blue_idx(idx: usize) -> usize {
     GRADIENT_LEN * 3 + idx
@@ -89,6 +93,7 @@ pub fn blue_idx(idx: usize) -> usize {
 
 /// Gives the index in the test image Vec of the given
 /// rgb table indices.
+#[allow(unused)]
 #[inline(always)]
 pub fn rgb_idx(r_idx: usize, g_idx: usize, b_idx: usize) -> usize {
     (GRADIENT_LEN * 4) + (r_idx * TABLE_SIZE * TABLE_SIZE) + (g_idx * TABLE_SIZE) + b_idx

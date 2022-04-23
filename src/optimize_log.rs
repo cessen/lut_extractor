@@ -45,7 +45,6 @@ pub fn find_parameters(lut: &[f32]) {
         100,
     );
     let log_offset = crate::linear_log::find_log_offset_for_end(end, offset, slope, base);
-    let transition = crate::linear_log::transition_point(offset, slope, log_offset, base);
 
     // Calculate the error of our model.
     let mut max_err = 0.0f64;

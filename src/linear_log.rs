@@ -55,16 +55,6 @@ pub fn find_log_offset_for_end(end: f64, line_offset: f64, slope: f64, base: f64
     offset_up
 }
 
-// Transition point between log and linear.
-//
-// Returned as (linear, non-linear).
-pub fn transition_point(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> (f64, f64) {
-    let transition = 1.0 / (slope * base.ln());
-    let k = transition + log_offset;
-
-    (k, (k - line_offset) * slope)
-}
-
 //-------------------------------------------------------------
 
 /// Generates Rust code for a both linear-to-log and log-to-linear
