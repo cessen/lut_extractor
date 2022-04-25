@@ -43,7 +43,7 @@ pub fn find_log_offset_for_end(end: f64, line_offset: f64, slope: f64, base: f64
     let mut offset_up = 10.0;
     let mut offset_down = -10.0;
 
-    for _ in 0..54 {
+    for _ in 0..100 {
         let log_offset = (offset_up + offset_down) * 0.5;
         if linear_to_log(end, line_offset, slope, log_offset, base) > 1.0 {
             offset_up = log_offset;
@@ -57,46 +57,38 @@ pub fn find_log_offset_for_end(end: f64, line_offset: f64, slope: f64, base: f64
 
 //-------------------------------------------------------------
 
-/// Generates Rust code for a both linear-to-log and log-to-linear
+/// Generates psuedo code for both linear-to-log and log-to-linear
 /// functions with the given parameters.
 pub fn generate_code(line_offset: f64, slope: f64, log_offset: f64, base: f64) -> String {
     let transition = 1.0 / (slope * base.ln());
     let k1 = transition + log_offset;
-    let k2 = (transition - line_offset + log_offset) * slope;
+    let k2 = (k1 - line_offset) * slope;
     let l = (transition - line_offset + log_offset) * slope - transition.log(base);
 
     format!(
         r#"
-const A: f32 = {};
-const B: f32 = {};
-const C: f32 = {};
-const D: f32 = {};
-const E: f32 = {};
+A = {} (line slope)
+B = {} (line y offset)
+C = {} (log y scale)
+D = {} (log x offset)
+E = {} (log y offset)
 
-pub fn linear_to_log(x: f32) -> f32 {{
-    const P: f32 = {};
+linear_to_log(x) =
+    if x <= {}:
+        A * x + B
+    else:
+        C * ln(x + D) + E
 
-    if x <= P {{
-        (x - A) * B
-    }} else {{
-        ((x - C).log2() / D) + E
-    }}
-}}
-
-pub fn log_to_linear(x: f32) -> f32 {{
-    const P: f32 = {};
-
-    if x <= P {{
-        (x / B) + A
-    }} else {{
-        ((x - E) * D).exp2() + C
-    }}
-}}
+log_to_linear(x) =
+    if x <= {}:
+        (x - B) / A
+    else:
+        e^((x - E) / C) - D
 "#,
-        line_offset,
         slope,
-        log_offset,
-        base.log2(),
+        -line_offset * slope,
+        1.0 / base.ln(),
+        -log_offset,
         l,
         k1,
         k2,

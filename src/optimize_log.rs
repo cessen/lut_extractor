@@ -34,12 +34,12 @@ pub fn find_parameters(lut: &[f32]) {
     let base = optimize(
         |v: f64| {
             let log_offset = crate::linear_log::find_log_offset_for_end(end, offset, slope, v);
-            let mut sqr_err = 0.0f64;
+            let mut rel_err = 0.0f64;
             for (x, y) in coords.iter().copied() {
                 let e = (log_to_lin(x, offset, slope, log_offset, v) - y).abs() / y.abs();
-                sqr_err += e * e;
+                rel_err += e;
             }
-            sqr_err
+            rel_err
         },
         [1.5, 10000000.0],
         100,
@@ -49,25 +49,29 @@ pub fn find_parameters(lut: &[f32]) {
     // Calculate the error of our model.
     let mut max_err = 0.0f64;
     let mut avg_err = 0.0f64;
+    let mut max_rel_err = 0.0f64;
+    let mut avg_rel_err = 0.0f64;
     let mut avg_samples = 0usize;
     for (x, y) in coords.iter().copied() {
-        let e = (log_to_lin(x, offset, slope, log_offset, base) - y).abs() / y.abs();
+        let e = (log_to_lin(x, offset, slope, log_offset, base) - y).abs();
         max_err = max_err.max(e);
         avg_err += e;
+        let rel_e = e / y.abs();
+        max_rel_err = max_rel_err.max(rel_e);
+        avg_rel_err += rel_e;
         avg_samples += 1;
     }
     avg_err /= avg_samples as f64;
+    avg_rel_err /= avg_samples as f64;
+
+    println!("Fitted function statistics:");
+    println!("  Max Relative Error: {}", max_rel_err);
+    println!("  Max Absolute Error: {}", max_err);
+    println!("  Avg Relative Error: {}", avg_rel_err);
+    println!("  Avg Absolute Error: {}", avg_err);
 
     println!(
-        "Max Relative Error: {:.4}%\nAvg Relative Error: {:.4}%",
-        max_err * 100.0,
-        avg_err * 100.0
-    );
-
-    // dbg!(offset, log_offset, slope, base, end);
-
-    println!(
-        "{}",
+        "\nFitted function pseudo code:\n{}",
         crate::linear_log::generate_code(offset, slope, log_offset, base),
     );
 }

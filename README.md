@@ -25,7 +25,9 @@ Next, run the processed OpenEXR image through lut_extractor like this:
 lut_extractor -i filename.exr
 ```
 
-This will produce two LUT files, one in `.cube` format and one in `.spi1d` format.  It will also print Rust code for an attempted analytic fit of the LUT.  The printed error percentages only apply to the Rust code, not to the LUT.  The LUT is always accurate as long as you followed the steps correctly.
+This will produce two LUT files, one in `.cube` format and one in `.spi1d` format.
+
+It also attempts an analytic fit to the LUT, but this only works well for specific kinds of transfer functions.  Error statistics and pseudo code of the fit are printed. (Note: Max Relative Error is the most relevant statistic, and should be below 0.01 for an okay fit and below 0.001 for a good fit.)
 
 And that's it!
 
